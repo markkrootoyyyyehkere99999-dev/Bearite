@@ -1,0 +1,12 @@
+{
+  "id": "sba-chess",
+  "name": "2D Шахматы (SBA Chess)",
+  "version": "1.0",
+  "author": "knightsba",
+  "description": "Полноценные 2D-шахматы поверх экрана игры. Включай и выключай доску в настройках мода или кнопкой на экране.",
+  "libs": ["libs/arm64-v8a/libsbachess.so"],
+  "settings": [
+    { "id": "enabled", "type": "bool", "name": "Включить шахматы на экране", "default": true },
+    { "id": "board_scale", "type": "int", "name": "Размер доски (%)", "default": 100 }
+  ]
+}

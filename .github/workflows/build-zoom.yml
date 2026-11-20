@@ -1,10 +1,10 @@
-name: Build SBA Zoom
+name: Build SBA Chess
 
 on:
   workflow_dispatch:
   push:
     paths:
-      - "sdk/sba-chess/**"
+      - "sdk/mods/sba-chess/**"
       - ".github/workflows/build-zoom.yml"
 
 jobs:
@@ -16,24 +16,24 @@ jobs:
 
       - name: Собрать .so
         run: |
-          cmake -S sdk/sba-zoom -B build-zoom \
+          cmake -S sdk/mods/sba-chess -B build-chess \
             -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_LATEST_HOME/build/cmake/android.toolchain.cmake \
             -DANDROID_ABI=arm64-v8a \
             -DANDROID_PLATFORM=android-24 \
             -DCMAKE_BUILD_TYPE=Release
-          cmake --build build-zoom
+          cmake --build build-chess
 
       - name: Собрать папку мода и упаковать в zip
         run: |
           mkdir -p out/libs/arm64-v8a
-          cp sdk/sba-zoom/mod.json out/
-          if [ -f sdk/sba-zoom/icon.png ]; then cp sdk/sba-zoom/icon.png out/; fi
-          cp build-zoom/libsbazoom.so out/libs/arm64-v8a/
+          cp sdk/mods/sba-chess/mod.json out/
+          if [ -f sdk/mods/sba-chess/icon.png ]; then cp sdk/mods/sba-chess/icon.png out/; fi
+          cp build-chess/libsbachess.so out/libs/arm64-v8a/
           cd out
-          zip -r ../sba-zoom.zip .
+          zip -r ../sba-chess.zip .
 
       - name: Выложить результат
         uses: actions/upload-artifact@v4
         with:
-          name: sba-zoom
-          path: sba-zoom.zip
+          name: sba-chess
+          path: sba-chess.zip

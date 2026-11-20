@@ -1,0 +1,11 @@
+{
+  "id": "chess",
+  "name": "Шахматы",
+  "version": "1.0",
+  "author": "я",
+  "description": "шахматы в сба мультиплеере",
+  "libs": ["libs/arm64-v8a/libmymod.so"],
+  "settings": [
+    { "id": "speed", "type": "float", "name": "Скорость", "min": 0.5, "max": 3, "default": 1 }
+  ]
+}

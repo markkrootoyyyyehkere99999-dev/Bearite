@@ -4,32 +4,26 @@
 #include "bearite_api.h"
 #include "bearite_il2cpp.h"
 
-/* --- СТРУКТУРЫ UNITY --- */
 typedef struct {
     float x, y, width, height;
 } UnityRect;
 
-/* --- ГЛОБАЛЬНОЕ СОСТОЯНИЕ ШАХМАТ --- */
 static const BeariteApi* g_api = NULL;
 static const char* g_mod_id = NULL;
 
-/* Фигуры: 0=пусто, 1=Пешка, 2=Ладья, 3=Конь, 4=Слон, 5=Ферзь, 6=Король
-   Положительные (>0) — Белые, Отрицательные (<0) — Чёрные */
 static int board[8][8];
-static int turn = 1;          /* 1 = ход белых, -1 = ход чёрных */
-static int sel_r = -1;        /* выбранная строка (-1 если не выбрано) */
-static int sel_c = -1;        /* выбранный столбец */
-static int board_open = 0;    /* 0 = свёрнуто в кнопку, 1 = открыта доска */
+static int turn = 1;
+static int sel_r = -1;
+static int sel_c = -1;
+static int board_open = 0;
 static int initialized = 0;
-static char status_text[128] = "Ход: БЕЛЫЕ";
+static char status_text[64] = "Ход: БЕЛЫЕ";
 
-/* --- МЕТОДЫ UNITY GUI --- */
 static void* mi_gui_button = NULL;
 static void* mi_gui_box = NULL;
 static void* mi_screen_w = NULL;
 static void* mi_screen_h = NULL;
 
-/* --- ЛОГИКА ШАХМАТ --- */
 static void reset_board(void) {
     int back_rank[8] = {2, 3, 4, 5, 6, 4, 3, 2};
     for (int r = 0; r < 8; r++) {
@@ -38,9 +32,9 @@ static void reset_board(void) {
         }
     }
     for (int c = 0; c < 8; c++) {
-        board[0][c] = -back_rank[c]; /* Чёрные сверху */
+        board[0][c] = -back_rank[c];
         board[1][c] = -1;
-        board[6][c] = 1;             /* Белые снизу */
+        board[6][c] = 1;
         board[7][c] = back_rank[c];
     }
     turn = 1;
@@ -85,7 +79,6 @@ static int can_move(int r1, int c1, int r2, int c2) {
     int p = board[r1][c1];
     int target = board[r2][c2];
     if (p == 0) return 0;
-    /* Нельзя бить свою фигуру */
     if ((p > 0 && target > 0) || (p < 0 && target < 0)) return 0;
 
     int dr = r2 - r1;
@@ -94,7 +87,7 @@ static int can_move(int r1, int c1, int r2, int c2) {
     int adc = abs(dc);
     int type = abs(p);
 
-    if (type == 1) { /* Пешка */
+    if (type == 1) {
         int dir = (p > 0) ? -1 : 1;
         int start_row = (p > 0) ? 6 : 1;
         if (dc == 0 && target == 0) {
@@ -104,28 +97,16 @@ static int can_move(int r1, int c1, int r2, int c2) {
         if (adc == 1 && dr == dir && target != 0) return 1;
         return 0;
     }
-    if (type == 2) { /* Ладья */
-        return (dr == 0 || dc == 0) && is_path_clear(r1, c1, r2, c2);
-    }
-    if (type == 3) { /* Конь */
-        return (adr == 2 && adc == 1) || (adr == 1 && adc == 2);
-    }
-    if (type == 4) { /* Слон */
-        return (adr == adc) && is_path_clear(r1, c1, r2, c2);
-    }
-    if (type == 5) { /* Ферзь */
-        return (dr == 0 || dc == 0 || adr == adc) && is_path_clear(r1, c1, r2, c2);
-    }
-    if (type == 6) { /* Король */
-        return adr <= 1 && adc <= 1;
-    }
+    if (type == 2) return (dr == 0 || dc == 0) && is_path_clear(r1, c1, r2, c2);
+    if (type == 3) return (adr == 2 && adc == 1) || (adr == 1 && adc == 2);
+    if (type == 4) return (adr == adc) && is_path_clear(r1, c1, r2, c2);
+    if (type == 5) return (dr == 0 || dc == 0 || adr == adc) && is_path_clear(r1, c1, r2, c2);
+    if (type == 6) return adr <= 1 && adc <= 1;
     return 0;
 }
 
 static void on_cell_click(int r, int c) {
     int clicked = board[r][c];
-
-    /* Если фигура ещё не выбрана — выбираем свою */
     if (sel_r == -1) {
         if ((turn == 1 && clicked > 0) || (turn == -1 && clicked < 0)) {
             sel_r = r;
@@ -133,8 +114,6 @@ static void on_cell_click(int r, int c) {
         }
         return;
     }
-
-    /* Если нажали на другую свою фигуру — переключаем выбор */
     if ((turn == 1 && clicked > 0) || (turn == -1 && clicked < 0)) {
         if (sel_r == r && sel_c == c) {
             sel_r = -1;
@@ -145,14 +124,11 @@ static void on_cell_click(int r, int c) {
         }
         return;
     }
-
-    /* Пробуем сделать ход */
     if (can_move(sel_r, sel_c, r, c)) {
         int captured = board[r][c];
         board[r][c] = board[sel_r][sel_c];
         board[sel_r][sel_c] = 0;
 
-        /* Превращение пешки в ферзя */
         if (board[r][c] == 1 && r == 0) board[r][c] = 5;
         if (board[r][c] == -1 && r == 7) board[r][c] = -5;
 
@@ -161,7 +137,7 @@ static void on_cell_click(int r, int c) {
 
         if (abs(captured) == 6) {
             snprintf(status_text, sizeof(status_text), "ПОБЕДА: %s!", turn == 1 ? "БЕЛЫЕ" : "ЧЁРНЫЕ");
-            turn = 0; /* Конец партии */
+            turn = 0;
         } else {
             turn = -turn;
             snprintf(status_text, sizeof(status_text), "Ход: %s", turn == 1 ? "БЕЛЫЕ" : "ЧЁРНЫЕ");
@@ -169,7 +145,6 @@ static void on_cell_click(int r, int c) {
     }
 }
 
-/* --- ОТРИСОВКА ЧЕРЕЗ UNITY GUI --- */
 static int call_gui_button(UnityRect rect, const char* label) {
     if (!mi_gui_button || !bearite_il2.string_new) return 0;
     void* str = bearite_il2.string_new(label);
@@ -205,7 +180,6 @@ static void draw_chess_ui(void) {
     int sw = get_screen_width();
     int sh = get_screen_height();
 
-    /* Кнопка открытия/закрытия шахмат в правом верхнем углу */
     UnityRect toggle_rect = { (float)(sw - 220), 20.0f, 200.0f, 55.0f };
     if (call_gui_button(toggle_rect, board_open ? "Закрыть шахматы" : "Шахматы")) {
         board_open = !board_open;
@@ -222,11 +196,9 @@ static void draw_chess_ui(void) {
     float start_x = (sw - base_size) * 0.5f;
     float start_y = (sh - base_size) * 0.5f + 20.0f;
 
-    /* Фон и заголовок */
     UnityRect bg_rect = { start_x - 15.0f, start_y - 65.0f, base_size + 30.0f, base_size + 125.0f };
     call_gui_box(bg_rect, status_text);
 
-    /* Отрисовка 64 клеток */
     char cell_text[16];
     for (int r = 0; r < 8; r++) {
         for (int c = 0; c < 8; c++) {
@@ -248,14 +220,12 @@ static void draw_chess_ui(void) {
         }
     }
 
-    /* Кнопка новой партии внизу доски */
     UnityRect reset_rect = { start_x, start_y + base_size + 10.0f, base_size, 45.0f };
     if (call_gui_button(reset_rect, "Новая партия")) {
         reset_board();
     }
 }
 
-/* Перехват метода отрисовки Unity GUI */
 static void (*orig_gui_changed)(void);
 static void my_gui_changed(void) {
     if (orig_gui_changed) orig_gui_changed();
@@ -279,7 +249,6 @@ void bearite_mod_init(const BeariteApi* api, const char* mod_id) {
         mi_screen_w   = bearite_find_method("UnityEngine", "Screen", "get_width", 0);
         mi_screen_h   = bearite_find_method("UnityEngine", "Screen", "get_height", 0);
 
-        /* Подключаемся к циклу GUI Unity */
         int hooked = bearite_hook_method(api, mod_id, "UnityEngine", "GUIUtility", "CheckOnGUI", 0,
                                          (void*)my_gui_changed, (void**)&orig_gui_changed);
         if (hooked == 0) {
